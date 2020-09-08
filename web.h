@@ -65,7 +65,6 @@ void setupWeb() {
 
   server.begin();
   Serial.println ( "HTTP server started" );
-  webServerStarted = true;
 }
 
 void handleWeb() {
@@ -82,6 +81,7 @@ void handleWeb() {
       if(apMode) Serial.println(WiFi.softAPIP());
       else Serial.println(WiFi.localIP());
       setupWeb();
+      webServerStarted = true;
     }
   } else {
     // blink the board's LED while connecting to wifi
