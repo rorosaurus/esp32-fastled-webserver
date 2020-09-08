@@ -23,57 +23,66 @@
 */
 
 void setupWeb() {
-  webServer.on("/all", HTTP_GET, []() {
+  if (apMode) dnsServer.start(53, "*", WiFi.softAPIP());
+//  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);//only when requested from AP
+
+  server.on("/all", HTTP_GET, [](AsyncWebServerRequest *request){
+      digitalWrite(led, 0);
+      String json = getFieldsJson(fields, fieldCount);
+      request->send(200, "text/json", json);
+      digitalWrite(led, 1);
+  });
+
+  server.on("/fieldValue", HTTP_GET, [](AsyncWebServerRequest *request){
+      digitalWrite(led, 0);
+      String name = request->getParam("name")->value();
+      String value = getFieldValue(name, fields, fieldCount);
+      request->send(200, "text/json", value);
+      digitalWrite(led, 1);
+  });
+
+  server.on("/fieldValue", HTTP_POST, [](AsyncWebServerRequest *request) {
     digitalWrite(led, 0);
-    String json = getFieldsJson(fields, fieldCount);
-    webServer.send(200, "text/json", json);
+    String name = request->getParam("name")->value();
+    String value = request->getParam("value")->value();
+    Serial.println(name + " " + value);
+    String newValue = setFieldValue(name, value, fields, fieldCount, request);
+    Serial.println(newValue);
+    request->send(200, "text/json", newValue);
     digitalWrite(led, 1);
   });
 
-  webServer.on("/fieldValue", HTTP_GET, []() {
-    digitalWrite(led, 0);
-    String name = webServer.arg("name");
-    String value = getFieldValue(name, fields, fieldCount);
-    webServer.send(200, "text/json", value);
-    digitalWrite(led, 1);
+  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+  server.on("/fwlink", [](AsyncWebServerRequest *request){
+    request->redirect("/index.htm");
+  });
+  
+  server.onNotFound([](AsyncWebServerRequest *request){
+    request->redirect("/index.htm");
   });
 
-  webServer.on("/fieldValue", HTTP_POST, []() {
-    digitalWrite(led, 0);
-    String name = webServer.arg("name");
-    String value = webServer.arg("value");
-    String newValue = setFieldValue(name, value, fields, fieldCount);
-    webServer.send(200, "text/json", newValue);
-    digitalWrite(led, 1);
-  });
+  server.serveStatic("/", FFat, "/").setCacheControl("max-age=<large prime number>");;
 
-  webServer.serveStatic("/", SPIFFS, "/index.htm", "max-age=86400");
-  webServer.serveStatic("/index.htm", SPIFFS, "/index.htm", "max-age=86400");
-  webServer.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico", "max-age=86400");
-  webServer.serveStatic("/css/styles.css", SPIFFS, "/css/styles.css", "max-age=86400");
-  webServer.serveStatic("/js/app.js", SPIFFS, "/js/app.js", "max-age=86400");
-  webServer.serveStatic("/images/atom196.png", SPIFFS, "/images/atom196.png", "max-age=86400");
-
-  webServer.begin();
+  server.begin();
   Serial.println ( "HTTP server started" );
+  webServerStarted = true;
 }
 
 void handleWeb() {
   static bool webServerStarted = false;
 
   // check for connection
-  if ( WiFi.status() == WL_CONNECTED ) {
+  if ( WiFi.status() == WL_CONNECTED || apMode == true) {
     if (!webServerStarted) {
       // turn off the board's LED when connected to wifi
       digitalWrite(led, 1);
       Serial.println();
       Serial.println("WiFi connected");
       Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
-      webServerStarted = true;
+      if(apMode) Serial.println(WiFi.softAPIP());
+      else Serial.println(WiFi.localIP());
       setupWeb();
     }
-    webServer.handleClient();
   } else {
     // blink the board's LED while connecting to wifi
     static uint8_t ledState = 0;
@@ -83,5 +92,5 @@ void handleWeb() {
       Serial.print (".");
     }
   }
+  if (apMode) dnsServer.processNextRequest();
 }
-

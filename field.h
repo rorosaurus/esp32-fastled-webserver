@@ -104,15 +104,15 @@ void writeFieldsToEEPROM(FieldList fields, uint8_t count) {
   EEPROM.commit();
 }
 
-String setFieldValue(String name, String value, FieldList fields, uint8_t count) {
+String setFieldValue(String name, String value, FieldList fields, uint8_t count, AsyncWebServerRequest *request) {
   String result;
 
   Field field = getField(name, fields, count);
   if (field.setValue) {
     if (field.type == ColorFieldType) {
-      String r = webServer.arg("r");
-      String g = webServer.arg("g");
-      String b = webServer.arg("b");
+      String r = request->getParam("r")->value();
+      String g = request->getParam("g")->value();
+      String b = request->getParam("b")->value();
       String combinedValue = r + "," + g + "," + b;
       result = field.setValue(combinedValue);
     } else {
