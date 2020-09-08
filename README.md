@@ -1,7 +1,7 @@
 # ESP32 FastLED Web Server
 **Work in progress ESP32 port of https://github.com/jasoncoon/esp8266-fastled-webserver**
 
-Update 09/08/2020: rorosaurus updated to use ESPAsyncWebServer as async server library. Also fixed AP mode to work standalone, with no internet connection needed.
+Update 09/08/2020: rorosaurus updated to use ESPAsyncWebServer as async server library. Also fixed AP mode to work standalone, with no internet connection needed. Large js files are gzipped, and the FatFS filesystem is used (instead of SPIFFS) to minimize chance of starving the watchdog timer while serving so many large files.
 
 Control addressable LEDs with an ESP32 via a web browser over Wi-Fi.
 
